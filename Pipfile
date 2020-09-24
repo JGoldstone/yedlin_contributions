@@ -1,0 +1,20 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+colour-science = { git = 'https://github.com/jgoldstone/colour.git@develop', editable = true }
+# OpenImageIO is complicated; it is installed through Brew, but its Python binding (the .so)
+# needs to be referenced by a symlink in the pyenv directory that pipenv is using as its base.
+# See the OmniOutliner file 'we have been here before' for details.
+# openimageio = { version = "*" }
+jupyterlab = "*"
+pandas = "*"
+fileseq = "*"
+dash = "==1.16.0"
+
+[requires]
+python_version = "3.8"
