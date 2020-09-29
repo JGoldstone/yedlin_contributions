@@ -893,7 +893,7 @@ def output(dataSet, colorspace, nuke):
         filename = datetime.now().strftime('%Y-%m-%dT%H:%M:%S').replace(':','_')
         with open(filename, 'w') as file:
             for (name, (r, g, b)) in dataSet[0]:
-                line = f"{name}, {r:.3f}, {g:.3f}, {b:.3f}\n"
+                line = f"{name} , {r:.3f} , {g:.3f} , {b:.3f}\n"
                 file.write(line)
         print('done')
 
@@ -955,21 +955,21 @@ def user_interface():
     dataSet = calc_data_set(illuminant, cct, tint, colorChips, colorspace)
 
 
+def get_params_and_write_dataset():
+    # user_interface()
+    illuminant = '(0.29902, 0.31485)'
+    cct = '5400'
+    tint = '1'
+    colorspace = 'AP0'
+    dataset = calc_data_set(illuminant, cct, tint, macbeth, colorspace)
+    output(dataset, colorspace, False)
 
 # user_message()
-
-#loop the interface
+# loop the interface
 looper = True
 while looper == True:
     try:
-        # user_interface()
-        illuminant = '(0.29902, 0.31485)'
-        cct = '5400'
-        tint = '1'
-        colorspace = 'AP0'
-        dataset = calc_data_set(illuminant, cct, tint, macbeth, colorspace)
-        output(dataset, colorspace, False)
-
+        get_params_and_write_dataset()
         goAgain = input('Enter "q" to quit or any other key to run again.')
     except:
         goAgain = input('\n\nError: could not interpret input. "q" to quit or any other key to try again.')
