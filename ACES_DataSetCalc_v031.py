@@ -890,12 +890,20 @@ def output(dataSet, colorspace, nuke):
                 if c<2: print ('{0:.3f}'.format(chip[1][c]) , end=' , ')
                 else: print ('{0:.3f}'.format(chip[1][c]) , end='\n' )
         print ('-----------------------------------\n')
-        filename = datetime.now().strftime('%Y-%m-%dT%H:%M:%S').replace(':','_')
-        with open(filename, 'w') as file:
-            for (name, (r, g, b)) in dataSet[0]:
-                line = f"{name} , {r:.3f} , {g:.3f} , {b:.3f}\n"
-                file.write(line)
-        print('done')
+
+def unique_filename(illuminant, cct, tint, colorspace):
+    timestamp_part = datetime.now().strftime('%Y-%m-%dT%H:%M:%S').replace(':','_')
+    chromaticity_part = f"{illuminant[0]:.5f}_{illuminant[1]:.5f}".replace('.','-')
+    cct_tint_colorspace_part = f"{cct}_{tint}_{colorspace}"
+    filename = f"{timestamp_part}_{chromaticity_part}_{cct_tint_colorspace_part}.csv"
+    return filename
+
+def output_to_csv_file(filename, dataSet):
+    with open(filename, 'w') as file:
+        for (name, (r, g, b)) in dataSet[0]:
+            line = f"{name} , {r:.3f} , {g:.3f} , {b:.3f}\n"
+            file.write(line)
+    print('done')
 
 def user_interface():
     
@@ -954,26 +962,32 @@ def user_interface():
     #Perform the main function.
     dataSet = calc_data_set(illuminant, cct, tint, colorChips, colorspace)
 
-
 def get_params_and_write_dataset():
     # user_interface()
-    illuminant = '(0.29902, 0.31485)'
+    illuminant_x = 0.29902
+    illuminant_y = 0.31485
+    illuminant = f"({illuminant_x:.5f}, {illuminant_y:.5f})"
     cct = '5400'
     tint = '1'
     colorspace = 'AP0'
-    dataset = calc_data_set(illuminant, cct, tint, macbeth, colorspace)
-    output(dataset, colorspace, False)
+    dataSet = calc_data_set(illuminant, cct, tint, macbeth, colorspace)
+    output(dataSet, colorspace, False)
+    csv_filename = unique_filename((illuminant_x, illuminant_y), cct, tint, colorspace)
+    output_to_csv_file(csv_filename, dataSet)
 
-# user_message()
-# loop the interface
-looper = True
-while looper == True:
-    try:
-        get_params_and_write_dataset()
-        goAgain = input('Enter "q" to quit or any other key to run again.')
-    except:
-        goAgain = input('\n\nError: could not interpret input. "q" to quit or any other key to try again.')
-    if goAgain.lower() == 'q' or goAgain.lower() == 'quit':
-        looper = False
+def cli_ui():
+    # user_message()
+    # loop the interface
+    looper = True
+    while looper == True:
+        try:
+            get_params_and_write_dataset()
+            goAgain = input('Enter "q" to quit or any other key to run again.')
+        except:
+            goAgain = input('\n\nError: could not interpret input. "q" to quit or any other key to try again.')
+        if goAgain.lower() == 'q' or goAgain.lower() == 'quit':
+            looper = False
 
+if __name__ == '__main__':
+    get_params_and_write_dataset()
 
