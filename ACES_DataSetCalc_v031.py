@@ -17,6 +17,8 @@ from collections import namedtuple
 from copy import deepcopy
 from math import log
 
+from datetime import datetime
+
 try:
   input = raw_input
 except:
@@ -597,8 +599,21 @@ def userWB_to_wb(user_cct, user_tint):
 # Even though the chips are semi-hardcoded, they're treated here as user input,
 # for future versions in which the user may be able to define the color chips.
 def calc_data_set (illuminant, cct, tint, colorChips, colorspace):
+    """
+    The main function in the file
+    Parameters
+    ----------
+    illuminant
+    cct
+    tint
+    colorChips
+    colorspace
 
-    #Convert user entered strings to lists.
+    Returns
+    -------
+
+    """
+    # illuminant is specified by chromaticity coordinates in x, y
     user_illum = userXY_to_xy(illuminant)
     user_whiteBal =userWB_to_wb(cct , tint)
     
@@ -774,6 +789,114 @@ both directions up and down. For most cameras at the time of writing, this will 
 soemwhere around 16 frames per second and 45-degree shutter.
         ''')
 
+# These are the Macbeth color chips as published by Mr Charles Poynton.
+# I have measured my own personal Macbeth chart and it is incredibly close,
+# so we know those charts are made with impressive reliability and repeatability.
+macbeth = [
+    ['18% gray', [.18, 0.31, 0.316]],
+    ['dark skin', [0.101, 0.4, 0.35]],
+    ['light skin', [0.358, 0.377, 0.345]],
+    ['blue sky', [0.193, 0.247, 0.251]],
+    ['foliage', [0.133, 0.337, 0.422]],
+    ['blue flower', [0.243, 0.265, 0.24]],
+    ['bluish green', [0.431, 0.261, 0.343]],
+    ['orange', [0.301, 0.506, 0.407]],
+    ['purplish blue', [0.12, 0.211, 0.175]],
+    ['moderate red', [0.198, 0.453, 0.306]],
+    ['purple', [0.066, 0.285, 0.202]],
+    ['yellow green', [0.443, 0.38, 0.489]],
+    ['orange yellow', [0.431, 0.473, 0.438]],
+    ['blue', [0.061, 0.187, 0.129]],
+    ['green', [0.234, 0.305, 0.478]],
+    ['red', [0.12, 0.539, 0.313]],
+    ['yellow', [0.591, 0.448, 0.47]],
+    ['magenta', [0.198, 0.364, 0.233]],
+    ['cyan', [0.198, 0.196, 0.252]],
+    ['white', [0.9, 0.31, 0.316]],
+    ['neutral_8', [0.591, 0.31, 0.316]],
+    ['neutral_6.5', [0.362, 0.31, 0.316]],
+    ['neutral_5', [0.198, 0.31, 0.316]],
+    ['neutral_3.5', [0.09, 0.31, 0.316]],
+    ['black', [0.031, 0.31, 0.316]],
+]
+
+# Same data, but from the Python colour-science module instead of from Poynton.
+# Apparently given in D50, per the documentation.
+#     COLORCHECKER_2005_DATA = (
+#     (1, 'dark skin', np.array([0.4316, 0.3777, 0.1008])),
+#     (2, 'light skin', np.array([0.4197, 0.3744, 0.3495])),
+#     (3, 'blue sky', np.array([0.2760, 0.3016, 0.1836])),
+#     (4, 'foliage', np.array([0.3703, 0.4499, 0.1325])),
+#     (5, 'blue flower', np.array([0.2999, 0.2856, 0.2304])),
+#     (6, 'bluish green', np.array([0.2848, 0.3911, 0.4178])),
+#     (7, 'orange', np.array([0.5295, 0.4055, 0.3118])),
+#     (8, 'purplish blue', np.array([0.2305, 0.2106, 0.1126])),
+#     (9, 'moderate red', np.array([0.5012, 0.3273, 0.1938])),
+#     (10, 'purple', np.array([0.3319, 0.2482, 0.0637])),
+#     (11, 'yellow green', np.array([0.3984, 0.5008, 0.4446])),
+#     (12, 'orange yellow', np.array([0.4957, 0.4427, 0.4357])),
+#     (13, 'blue', np.array([0.2018, 0.1692, 0.0575])),
+#     (14, 'green', np.array([0.3253, 0.5032, 0.2318])),
+#     (15, 'red', np.array([0.5686, 0.3303, 0.1257])),
+#     (16, 'yellow', np.array([0.4697, 0.4734, 0.5981])),
+#     (17, 'magenta', np.array([0.4159, 0.2688, 0.2009])),
+#     (18, 'cyan', np.array([0.2131, 0.3023, 0.1930])),
+#     (19, 'white 9.5 (.05 D)', np.array([0.3469, 0.3608, 0.9131])),
+#     (20, 'neutral 8 (.23 D)', np.array([0.3440, 0.3584, 0.5894])),
+#     (21, 'neutral 6.5 (.44 D)', np.array([0.3432, 0.3581, 0.3632])),
+#     (22, 'neutral 5 (.70 D)', np.array([0.3446, 0.3579, 0.1915])),
+#     (23, 'neutral 3.5 (1.05 D)', np.array([0.3401, 0.3548, 0.0883])),
+#     (24, 'black 2 (1.5 D)', np.array([0.3406, 0.3537, 0.0311])))
+
+def output(dataSet, colorspace, nuke):
+    #Print the results to the screen either as a Nuke Constant node or in a form
+    #which is both human-readable and usable as comma-separated.
+    print('\n\n-----------------------------------\n'
+        'A properly exposed Macbeth chart illuminated with CIE 1931 x,y chromaticity of:\n'
+        'x = ' + '{0:.4f}'.format(dataSet[1][0]) + ' , y = ' + '{0:.4f}'.format(dataSet[1][1]) + '\n'
+        'as seen through the lens\n'
+        'should yield the below RGB triplets if the user White Balance is set to:\n'
+        '{0:.0f}'.format(dataSet[2][0]) + 'K , ' + '{0:.4f}'.format(dataSet[2][1]) + ' ' , end='')
+    try : print( delta , end='')
+    except: print ( 'Delta-' , end='' )
+    print('uv.\n\n'
+        'Values given in ' , end='')
+
+    if colorspace == 'AP1' : print ('ACES rgb (linear AP1):\n')
+    elif colorspace == 'CC' : print ('ACEScc rgb (logarithmic):\n')
+    elif colorspace == 'CCT' : print ('ACEScct rgb (logarithmic):\n')
+    else : print ('ACES (linear AP0):\n')
+    if nuke:
+        print('\nGiven here as a Nuke Constant node with results as sequential frames:\n')
+        rCurve = ''
+        gCurve = ''
+        bCurve = ''
+        for chip in dataSet[0]:
+            rCurve += (str(chip[1][0]) + ' ')
+            gCurve += (str(chip[1][1]) + ' ')
+            bCurve += (str(chip[1][2]) + ' ')
+        nukeNode = 'Constant {\n inputs 0\n channels rgb\n color {{curve '
+        nukeNode += rCurve
+        nukeNode += '} {curve '
+        nukeNode += gCurve
+        nukeNode += '} {curve '
+        nukeNode += bCurve
+        nukeNode += '} {curve 0}}\n format "1920 1080 0 0 1920 1080 1 HD_1080"\n name ACES_targets\n selected true\n}\n\n'
+        print (nukeNode)
+    else:
+        for chip in dataSet[0]:
+            print (chip[0] + ' , ' , end = '')
+            for c in range(3):
+                if c<2: print ('{0:.3f}'.format(chip[1][c]) , end=' , ')
+                else: print ('{0:.3f}'.format(chip[1][c]) , end='\n' )
+        print ('-----------------------------------\n')
+        filename = datetime.now().strftime('%Y-%m-%dT%H:%M:%S').replace(':','_')
+        with open(filename, 'w') as file:
+            for (name, (r, g, b)) in dataSet[0]:
+                line = f"{name}, {r:.3f}, {g:.3f}, {b:.3f}\n"
+                file.write(line)
+        print('done')
+
 def user_interface():
     
     print ('-----------------------------------\n\n\n'
@@ -812,65 +935,6 @@ def user_interface():
     else:
         nuke = False
         
-    # These are the Macbeth color chips as published by Mr Charles Poynton.
-    # I have measured my own personal Macbeth chart and it is incredibly close,
-    # so we know those charts are made with impressive reliability and repeatability.
-    macbeth =[
-    ['18% gray', [.18, 0.31, 0.316]],
-    ['dark skin', [0.101, 0.4, 0.35]],
-    ['light skin', [0.358, 0.377, 0.345]],
-    ['blue sky', [0.193, 0.247, 0.251]],
-    ['foliage', [0.133, 0.337, 0.422]],
-    ['blue flower', [0.243, 0.265, 0.24]],
-    ['bluish green', [0.431, 0.261, 0.343]],
-    ['orange', [0.301, 0.506, 0.407]],
-    ['purplish blue', [0.12, 0.211, 0.175]],
-    ['moderate red', [0.198, 0.453, 0.306]],
-    ['purple', [0.066, 0.285, 0.202]],
-    ['yellow green', [0.443, 0.38, 0.489]],
-    ['orange yellow', [0.431, 0.473, 0.438]],
-    ['blue', [0.061, 0.187, 0.129]],
-    ['green', [0.234, 0.305, 0.478]],
-    ['red', [0.12, 0.539, 0.313]],
-    ['yellow', [0.591, 0.448, 0.47]],
-    ['magenta', [0.198, 0.364, 0.233]],
-    ['cyan', [0.198, 0.196, 0.252]],
-    ['white', [0.9, 0.31, 0.316]],
-    ['neutral_8', [0.591, 0.31, 0.316]],
-    ['neutral_6.5', [0.362, 0.31, 0.316]],
-    ['neutral_5', [0.198, 0.31, 0.316]],
-    ['neutral_3.5', [0.09, 0.31, 0.316]],
-    ['black', [0.031, 0.31, 0.316]],
-    ]
-    
-    #Same data, but from the Python colour-science module instead of from Poynton.
-    #Apparently given in D50, per the documentation.
-#     COLORCHECKER_2005_DATA = (
-#     (1, 'dark skin', np.array([0.4316, 0.3777, 0.1008])),
-#     (2, 'light skin', np.array([0.4197, 0.3744, 0.3495])),
-#     (3, 'blue sky', np.array([0.2760, 0.3016, 0.1836])),
-#     (4, 'foliage', np.array([0.3703, 0.4499, 0.1325])),
-#     (5, 'blue flower', np.array([0.2999, 0.2856, 0.2304])),
-#     (6, 'bluish green', np.array([0.2848, 0.3911, 0.4178])),
-#     (7, 'orange', np.array([0.5295, 0.4055, 0.3118])),
-#     (8, 'purplish blue', np.array([0.2305, 0.2106, 0.1126])),
-#     (9, 'moderate red', np.array([0.5012, 0.3273, 0.1938])),
-#     (10, 'purple', np.array([0.3319, 0.2482, 0.0637])),
-#     (11, 'yellow green', np.array([0.3984, 0.5008, 0.4446])),
-#     (12, 'orange yellow', np.array([0.4957, 0.4427, 0.4357])),
-#     (13, 'blue', np.array([0.2018, 0.1692, 0.0575])),
-#     (14, 'green', np.array([0.3253, 0.5032, 0.2318])),
-#     (15, 'red', np.array([0.5686, 0.3303, 0.1257])),
-#     (16, 'yellow', np.array([0.4697, 0.4734, 0.5981])),
-#     (17, 'magenta', np.array([0.4159, 0.2688, 0.2009])),
-#     (18, 'cyan', np.array([0.2131, 0.3023, 0.1930])),
-#     (19, 'white 9.5 (.05 D)', np.array([0.3469, 0.3608, 0.9131])),
-#     (20, 'neutral 8 (.23 D)', np.array([0.3440, 0.3584, 0.5894])),
-#     (21, 'neutral 6.5 (.44 D)', np.array([0.3432, 0.3581, 0.3632])),
-#     (22, 'neutral 5 (.70 D)', np.array([0.3446, 0.3579, 0.1915])),
-#     (23, 'neutral 3.5 (1.05 D)', np.array([0.3401, 0.3548, 0.0883])),
-#     (24, 'black 2 (1.5 D)', np.array([0.3406, 0.3537, 0.0311])))
-
     if chips[0] == '2': colorChips = [macbeth[0]] + [macbeth[22]] + macbeth[13:19]
     else: colorChips = macbeth
     
@@ -890,66 +954,26 @@ def user_interface():
     #Perform the main function.
     dataSet = calc_data_set(illuminant, cct, tint, colorChips, colorspace)
 
-    #Print the results to the screen either as a Nuke Constant node or in a form
-    #which is both human-readable and usable as comma-separated.
-    print('\n\n-----------------------------------\n'
-        'A properly exposed Macbeth chart illuminated with CIE 1931 x,y chromaticity of:\n'
-        'x = ' + '{0:.4f}'.format(dataSet[1][0]) + ' , y = ' + '{0:.4f}'.format(dataSet[1][1]) + '\n'
-        'as seen through the lens\n'
-        'should yield the below RGB triplets if the user White Balance is set to:\n'
-        '{0:.0f}'.format(dataSet[2][0]) + 'K , ' + '{0:.4f}'.format(dataSet[2][1]) + ' ' , end='')
-    try : print( delta , end='')
-    except: print ( 'Delta-' , end='' )
-    print('uv.\n\n'
-        'Values given in ' , end='')
 
-    if colorspace == 'AP1' : print ('ACES rgb (linear AP1):\n')
-    elif colorspace == 'CC' : print ('ACEScc rgb (logarithmic):\n')
-    elif colorspace == 'CCT' : print ('ACEScct rgb (logarithmic):\n')
-    else : print ('ACES (linear AP0):\n')
-    if nuke:
-    
-        print('\nGiven here as a Nuke Constant node with results as sequential frames:\n')
-        
-        rCurve = ''
-        gCurve = ''
-        bCurve = ''
-        for chip in dataSet[0]:
-            rCurve += (str(chip[1][0]) + ' ')
-            gCurve += (str(chip[1][1]) + ' ')
-            bCurve += (str(chip[1][2]) + ' ')
-        
-        nukeNode = 'Constant {\n inputs 0\n channels rgb\n color {{curve '
-        nukeNode += rCurve
-        nukeNode += '} {curve '
-        nukeNode += gCurve
-        nukeNode += '} {curve '
-        nukeNode += bCurve
-        nukeNode += '} {curve 0}}\n format "1920 1080 0 0 1920 1080 1 HD_1080"\n name ACES_targets\n selected true\n}\n\n'
-        
-        print (nukeNode)
-            
-        
-    else:  
-        for chip in dataSet[0]:
-            print (chip[0] + ' , ' , end = '')
-            for c in range(3):
-                if c<2: print ('{0:.3f}'.format(chip[1][c]) , end=' , ')
-                else: print ('{0:.3f}'.format(chip[1][c]) , end='\n' )
-        print ('-----------------------------------\n')
-    
-    
 
-user_message()
+# user_message()
 
 #loop the interface
 looper = True
 while looper == True:
     try:
-        user_interface()
+        # user_interface()
+        illuminant = '(0.29902, 0.31485)'
+        cct = '5400'
+        tint = '1'
+        colorspace = 'AP0'
+        dataset = calc_data_set(illuminant, cct, tint, macbeth, colorspace)
+        output(dataset, colorspace, False)
+
         goAgain = input('Enter "q" to quit or any other key to run again.')
     except:
         goAgain = input('\n\nError: could not interpret input. "q" to quit or any other key to try again.')
     if goAgain.lower() == 'q' or goAgain.lower() == 'quit':
         looper = False
+
 
