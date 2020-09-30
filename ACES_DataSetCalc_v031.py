@@ -541,7 +541,7 @@ def CCT_to_uv(CCT, D_uv=0):
 
 # This function turns user input into x,y coordinates, 
 # even if the user is not careful about syntax.
-def userXY_to_xy (user_xy):
+def parse_user_xy (user_xy):
 
     #The user may have included extra spaces.
     xy = str(user_xy).strip()
@@ -573,7 +573,7 @@ def userXY_to_xy (user_xy):
     return list(eval(xy))
 
 #Convert the user's white balance input to usable CCT and Tint.
-def userWB_to_wb(user_cct, user_tint):
+def parse_user_cct_and_tint(user_cct, user_tint):
 
     if type(user_cct) == str:
         cct = ''
@@ -592,30 +592,14 @@ def userWB_to_wb(user_cct, user_tint):
         tint = float(user_tint)
         
     return [cct,tint]
-    
-
 
 # The main calculator function takes the user's input and returns the targets.
 # Even though the chips are semi-hardcoded, they're treated here as user input,
 # for future versions in which the user may be able to define the color chips.
 def calc_data_set (illuminant, cct, tint, colorChips, colorspace):
-    """
-    The main function in the file
-    Parameters
-    ----------
-    illuminant
-    cct
-    tint
-    colorChips
-    colorspace
-
-    Returns
-    -------
-
-    """
     # illuminant is specified by chromaticity coordinates in x, y
-    user_illum = userXY_to_xy(illuminant)
-    user_whiteBal =userWB_to_wb(cct , tint)
+    user_illum = parse_user_xy(illuminant)
+    user_whiteBal =parse_user_cct_and_tint(cct, tint)
     
     #Get the x,y coordinates for the white balance.
     whiteBal = CCT_to_uv(user_whiteBal[0],user_whiteBal[1])
@@ -958,30 +942,23 @@ def user_interface():
     elif ACES_format[0] == '3': colorspace = 'CC'
     elif ACES_format[0] == '4': colorspace = 'CCT'
     else: colorspace = 'AP0'
+    return (illuminant, cct, tint, colorChips, colorspace)
 
-    #Perform the main function.
-    dataSet = calc_data_set(illuminant, cct, tint, colorChips, colorspace)
-
-def get_params_and_write_dataset():
-    # user_interface()
-    illuminant_x = 0.29902
-    illuminant_y = 0.31485
-    illuminant = f"({illuminant_x:.5f}, {illuminant_y:.5f})"
-    cct = '5400'
-    tint = '1'
-    colorspace = 'AP0'
+def calc_and_write_target_values(illuminant, cct, tint, macbeth, colorspace):
+    # #Perform the main function.
     dataSet = calc_data_set(illuminant, cct, tint, macbeth, colorspace)
     output(dataSet, colorspace, False)
-    csv_filename = unique_filename((illuminant_x, illuminant_y), cct, tint, colorspace)
+    csv_filename = unique_filename((illuminant[0], illuminant[1]), cct, tint, colorspace)
     output_to_csv_file(csv_filename, dataSet)
 
 def cli_ui():
-    # user_message()
+    user_message()
     # loop the interface
     looper = True
     while looper == True:
         try:
-            get_params_and_write_dataset()
+            (illuminant, cct, tint, colorChips, colorspace) = user_interface()
+            calc_and_write_target_values(illuminant, cct, tint, colorChips, colorspace)
             goAgain = input('Enter "q" to quit or any other key to run again.')
         except:
             goAgain = input('\n\nError: could not interpret input. "q" to quit or any other key to try again.')
@@ -989,5 +966,5 @@ def cli_ui():
             looper = False
 
 if __name__ == '__main__':
-    get_params_and_write_dataset()
+    cli_ui()
 
