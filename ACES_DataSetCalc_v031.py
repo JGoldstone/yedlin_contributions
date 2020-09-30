@@ -584,7 +584,7 @@ def CCT_to_uv(CCT, D_uv=0):
 # The main calculator function takes the user's input and returns the targets.
 # Even though the chips are semi-hardcoded, they're treated here as user input,
 # for future versions in which the user may be able to define the color chips.
-def calc_data_set(user_illum_xy, cct, d_uv, color_chips, colorspace):
+def calc_target_cap_xyz_values(user_illum_xy, cct, d_uv, color_chips, colorspace):
     """
 
     Parameters
@@ -604,6 +604,8 @@ def calc_data_set(user_illum_xy, cct, d_uv, color_chips, colorspace):
 
     Returns
     -------
+    ndarray
+        CIE XYZ nominal expected values for captured target color chips
 
     """
     # Get the x,y coordinates for the white balance.
@@ -627,7 +629,7 @@ def calc_data_set(user_illum_xy, cct, d_uv, color_chips, colorspace):
     wbRatio = illum / white_bal_xy
 
     # Build the data set output triplets.
-    dataSet = []
+    target_cap_xyz_values = []
     for chip in color_chips:
         c = deepcopy(chip[1])
         c = Yxy_to_XYZ(c)
@@ -648,17 +650,16 @@ def calc_data_set(user_illum_xy, cct, d_uv, color_chips, colorspace):
 
         # Convert to the user's preferred color space.
         if colorspace == 'AP0':
-            dataSet.append([chip[0], c])
+            target_cap_xyz_values.append([chip[0], c])
         else:
             c = linAP0_to_linAP1(c)
             if colorspace == 'AP1':
-                dataSet.append([chip[0], c])
+                target_cap_xyz_values.append([chip[0], c])
             elif colorspace == 'CC':
-                dataSet.append([chip[0], linAP1_to_ACEScc(c)])
+                target_cap_xyz_values.append([chip[0], linAP1_to_ACEScc(c)])
             else:
-                dataSet.append([chip[0], linAP1_to_ACEScct(c)])
-
-    return [dataSet, list(user_illum_xy), [cct, d_uv]]
+                target_cap_xyz_values.append([chip[0], linAP1_to_ACEScct(c)])
+    return target_cap_xyz_values
 
 
 # Tee up special characters for the user interface.
@@ -763,20 +764,20 @@ def write_nuke_node(dataSet, dest_file=sys.stdout):
     print(nukeNode)
 
 
-def write_csv(filename, dataSet):
+def write_csv(filename, target_cap_xyz_values):
     with open(filename, 'w') as file:
-        for (name, (r, g, b)) in dataSet[0]:
+        for (name, (r, g, b)) in target_cap_xyz_values:
             line = f"{name} , {r:.3f} , {g:.3f} , {b:.3f}\n"
             file.write(line)
     print('done')
 
 
-def write_output(dataSet, colorspace, nuke):
-    write_informative_header(dataSet, colorspace, dest_file=sys.stdout)
+def write_output(target_chip_cap_xyzs, colorspace, nuke):
+    write_informative_header(target_chip_cap_xyzs, colorspace, dest_file=sys.stdout)
     if nuke:
-        write_nuke_node(dataSet, dest_file=dest_file)
+        write_nuke_node(target_chip_cap_xyzs, dest_file=dest_file)
     else:
-        for chip in dataSet[0]:
+        for chip in target_chip_cap_xyzs:
             print(chip[0] + ' , ', end='')
             for c in range(3):
                 if c < 2:
@@ -786,20 +787,20 @@ def write_output(dataSet, colorspace, nuke):
         print('-----------------------------------\n')
 
 
-def unique_filename(illuminant, cct, tint, colorspace):
+def unique_filename(user_illum_xy, cct, tint, colorspace):
     timestamp_part = datetime.now().strftime('%Y-%m-%dT%H:%M:%S').replace(':', '_')
-    chromaticity_part = f"{illuminant[0]:.5f}_{illuminant[1]:.5f}".replace('.', '-')
+    chromaticity_part = f"{user_illum_xy[0]:.5f}_{user_illum_xy[1]:.5f}".replace('.', '-')
     cct_tint_colorspace_part = f"{cct}_{tint}_{colorspace}"
     filename = f"{timestamp_part}_{chromaticity_part}_{cct_tint_colorspace_part}.csv"
     return filename
 
 
-def calc_and_write_target_values(illuminant, cct, tint, macbeth, colorspace):
+def calc_and_write_target_cap_xyz_values(user_illum_xy, cct, tint, macbeth, colorspace):
     # #Perform the main function.
-    dataSet = calc_data_set(illuminant, cct, tint, macbeth, colorspace)
-    write_output(dataSet, colorspace, False)
-    csv_filename = unique_filename((illuminant[0], illuminant[1]), cct, tint, colorspace)
-    write_csv(csv_filename, dataSet)
+    target_cap_xyz_values = calc_target_cap_xyz_values(user_illum_xy, cct, tint, macbeth, colorspace)
+    write_output(target_cap_xyz_values, colorspace, False)
+    csv_filename = unique_filename(user_illum_xy, cct, tint, colorspace)
+    write_csv(csv_filename, target_cap_xyz_values)
 
 
 def cli_ui():
@@ -809,7 +810,7 @@ def cli_ui():
     while looper == True:
         try:
             (illuminant, cct, tint, colorChips, colorspace) = user_interface()
-            calc_and_write_target_values(illuminant, cct, tint, colorChips, colorspace)
+            calc_and_write_target_cap_xyz_values(illuminant, cct, tint, colorChips, colorspace)
             goAgain = input('Enter "q" to quit or any other key to run again.')
         except:
             goAgain = input('\n\nError: could not interpret input. "q" to quit or any other key to try again.')

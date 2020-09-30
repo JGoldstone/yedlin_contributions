@@ -15,10 +15,10 @@ class MyTestCase(unittest.TestCase):
 
     def test_identical_output(self):
         reference_output = np.genfromtxt('data/reference_output.csv', delimiter=',', usecols = [1, 2, 3])
-        dataSet = sy.calc_data_set(USER_ILLUMINANT, CCT, D_UV, sy.macbeth, COLORSPACE)
+        target_cap_xyz_values = sy.calc_target_cap_xyz_values(USER_ILLUMINANT, CCT, D_UV, sy.macbeth, COLORSPACE)
         csv_pathname = Path('/tmp', sy.unique_filename((USER_ILLUMINANT[0], USER_ILLUMINANT[1]),
                                                        CCT, D_UV, COLORSPACE))
-        sy.write_csv(str(csv_pathname), dataSet)
+        sy.write_csv(str(csv_pathname), target_cap_xyz_values)
         test_output = np.genfromtxt(str(csv_pathname), delimiter=',', usecols=[1, 2, 3])
         self.assertIsNone(np.testing.assert_array_equal(test_output, reference_output))
 
