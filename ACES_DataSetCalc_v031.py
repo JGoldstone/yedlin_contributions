@@ -589,7 +589,7 @@ def calc_target_cap_xyz_values(user_illum_xy, cct, d_uv, color_chips, colorspace
 
     Parameters
     ----------
-    user_illum_xy : float
+    user_illum_xy : List[float]
         The x,y chromaticity coordinates of the illuminant as measured through the lens
     cct : float
         The CCT selected on the camera
@@ -764,16 +764,14 @@ def write_nuke_node(dataSet, dest_file=sys.stdout):
     print(nukeNode)
 
 
-def write_csv(filename, target_cap_xyz_values):
-    with open(filename, 'w') as file:
-        for (name, (r, g, b)) in target_cap_xyz_values:
-            line = f"{name} , {r:.3f} , {g:.3f} , {b:.3f}\n"
-            file.write(line)
-    print('done')
+def write_csv(target_cap_xyz_values, dest_file=sys.stdout):
+    for (name, (r, g, b)) in target_cap_xyz_values:
+        dest_file.write(f"{name} , {r:.3f} , {g:.3f} , {b:.3f}\n")
+        if dest_file == sys.stdout:
+            print('-----------------------------------\n')
 
-
-def write_output(target_chip_cap_xyzs, colorspace, nuke):
-    write_informative_header(target_chip_cap_xyzs, colorspace, dest_file=sys.stdout)
+def write_output(target_chip_cap_xyzs, colorspace, nuke, dest_file=sys.stdout):
+    write_informative_header(target_chip_cap_xyzs, colorspace, dest_file=dest_file)
     if nuke:
         write_nuke_node(target_chip_cap_xyzs, dest_file=dest_file)
     else:
@@ -791,16 +789,19 @@ def unique_filename(user_illum_xy, cct, tint, colorspace):
     timestamp_part = datetime.now().strftime('%Y-%m-%dT%H:%M:%S').replace(':', '_')
     chromaticity_part = f"{user_illum_xy[0]:.5f}_{user_illum_xy[1]:.5f}".replace('.', '-')
     cct_tint_colorspace_part = f"{cct}_{tint}_{colorspace}"
-    filename = f"{timestamp_part}_{chromaticity_part}_{cct_tint_colorspace_part}.csv"
-    return filename
+    filename_base = f"{timestamp_part}_{chromaticity_part}_{cct_tint_colorspace_part}"
+    return filename_base
 
 
 def calc_and_write_target_cap_xyz_values(user_illum_xy, cct, tint, macbeth, colorspace):
     # #Perform the main function.
     target_cap_xyz_values = calc_target_cap_xyz_values(user_illum_xy, cct, tint, macbeth, colorspace)
+    output_filename_base = unique_filename(user_illum_xy, cct, tint, colorspace)
     write_output(target_cap_xyz_values, colorspace, False)
-    csv_filename = unique_filename(user_illum_xy, cct, tint, colorspace)
-    write_csv(csv_filename, target_cap_xyz_values)
+    with open(f"{output_filename_base}.nk", 'w') as dest_file:
+        write_nuke_node(target_cap_xyz_values, dest_file=dest_file)
+    with open(f"{output_filename_base}.csv", 'w') as dest_file:
+        write_csv(target_cap_xyz_values, dest_file=dest_file)
 
 
 def cli_ui():

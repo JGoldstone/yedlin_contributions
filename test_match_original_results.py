@@ -14,12 +14,13 @@ COLORSPACE = 'AP0'
 class MyTestCase(unittest.TestCase):
 
     def test_identical_output(self):
-        reference_output = np.genfromtxt('data/reference_output.csv', delimiter=',', usecols = [1, 2, 3])
+        reference_output = np.genfromtxt('data/reference_output.csv', delimiter=',', usecols=[1, 2, 3])
         target_cap_xyz_values = sy.calc_target_cap_xyz_values(USER_ILLUMINANT, CCT, D_UV, sy.macbeth, COLORSPACE)
-        csv_pathname = Path('/tmp', sy.unique_filename((USER_ILLUMINANT[0], USER_ILLUMINANT[1]),
-                                                       CCT, D_UV, COLORSPACE))
-        sy.write_csv(str(csv_pathname), target_cap_xyz_values)
-        test_output = np.genfromtxt(str(csv_pathname), delimiter=',', usecols=[1, 2, 3])
+        csv_path = Path('/tmp', sy.unique_filename((USER_ILLUMINANT[0], USER_ILLUMINANT[1]), CCT, D_UV,
+                                                   COLORSPACE) + '.csv')
+        with open(csv_path, 'w') as dest_file:
+            sy.write_csv(target_cap_xyz_values, dest_file)
+        test_output = np.genfromtxt(str(csv_path), delimiter=',', usecols=[1, 2, 3])
         self.assertIsNone(np.testing.assert_array_equal(test_output, reference_output))
 
     def test_cct_parser(self):
@@ -33,11 +34,11 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(5600.0, parse_cct('5600.0K'))
         self.assertEqual(5600.1, parse_cct('5600.1K'))
         with self.assertRaises(SyntaxError):
-            cct = parse_cct('K5600')
+            _ = parse_cct('K5600')
         with self.assertRaises(SyntaxError):
-            cct = parse_cct('5600-')
+            _ = parse_cct('5600-')
         with self.assertRaises(SyntaxError):
-            cct = parse_cct('-5600')
+            _ = parse_cct('-5600')
 
     def test_tint_parser(self):
         self.assertEqual(5.0, parse_tint('5'))
@@ -54,9 +55,9 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(5.0, parse_tint('+5.0'))
         self.assertEqual(5.1, parse_tint('+5.1'))
         with self.assertRaises(SyntaxError):
-            cct = parse_tint('-5-')
+            _ = parse_tint('-5-')
         with self.assertRaises(SyntaxError):
-            cct = parse_tint('5+')
+            _ = parse_tint('5+')
 
 
 if __name__ == '__main__':
