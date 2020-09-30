@@ -20,7 +20,7 @@ from math import log
 
 from datetime import datetime
 
-from tty_ui import parse_user_xy, parse_user_cct_and_tint, user_interface
+from tty_ui import user_message, user_interface
 
 try:
     input = raw_input
@@ -581,15 +581,22 @@ def CCT_to_uv(CCT, D_uv=0):
 
 # This is the end of the block based on the Python colour-science package.
 
+# Poynton has given the color chips in Illuminant C,
+# so we'll need the x,y coordinate for illuminant C.
+ILLUM_C_LITTLE_XY = [0.3101, 0.3163]
+
+# The AP0 x,y white point in given in the ACES documentation:
+ACES_NEUTRAL_LITTLE_XY = [0.32168, 0.33767]
+
 # The main calculator function takes the user's input and returns the targets.
 # Even though the chips are semi-hardcoded, they're treated here as user input,
 # for future versions in which the user may be able to define the color chips.
-def calc_target_cap_xyz_values(user_illum_xy, cct, d_uv, color_chips, colorspace):
+def calc_target_cap_xyz_values(measured_neutral_xy, cct, d_uv, color_chips, colorspace):
     """
 
     Parameters
     ----------
-    user_illum_xy : List[float]
+    measured_neutral_xy : List[float]
         The x,y chromaticity coordinates of the illuminant as measured through the lens
     cct : float
         The CCT selected on the camera
@@ -608,25 +615,19 @@ def calc_target_cap_xyz_values(user_illum_xy, cct, d_uv, color_chips, colorspace
         CIE XYZ nominal expected values for captured target color chips
 
     """
+    measured_neutral_cap_xyz = np.array(xy_to_XYZ(measured_neutral_xy))
+
     # Get the x,y coordinates for the white balance.
-    white_bal_uv = CCT_to_uv(cct, d_uv)
-    white_bal_xy = uv_to_xy(white_bal_uv)
+    camera_uv = CCT_to_uv(cct, d_uv)
+    camera_xy = uv_to_xy(camera_uv)
+    camera_cap_xyz = np.array(xy_to_XYZ(camera_xy))
 
-    # Poynton has given the color chips in Illuminant C,
-    # so we'll need the x,y coordinate for illuminant C.
-    IllumC = [0.3101, 0.3163]
-
-    # The AP0 x,y white point in given in the ACES documentation:
-    AP0 = [0.32168, 0.33767]
-
-    illum = np.array(xy_to_XYZ(user_illum_xy))
-    white_bal_xy = np.array(xy_to_XYZ(white_bal_xy))
-    IllumC = np.array(xy_to_XYZ(IllumC))
-    AP0 = np.array(xy_to_XYZ(AP0))
+    illum_c_cap_xyz = np.array(xy_to_XYZ(ILLUM_C_LITTLE_XY))
+    aces_neutral_cap_xyz = np.array(xy_to_XYZ(ACES_NEUTRAL_LITTLE_XY))
 
     # Find the white balance ratio, which is the ratio between
     # the camera white balance setting and the actual color of the light.
-    wbRatio = illum / white_bal_xy
+    wb_ratio = measured_neutral_cap_xyz / camera_cap_xyz
 
     # Build the data set output triplets.
     target_cap_xyz_values = []
@@ -636,11 +637,11 @@ def calc_target_cap_xyz_values(user_illum_xy, cct, d_uv, color_chips, colorspace
         c = np.array(c)
 
         # Convert reference white from Illuminant C to AP0.
-        c *= AP0 / IllumC
+        c *= aces_neutral_cap_xyz / illum_c_cap_xyz
 
         # Account for the shift due to the fact that the actual illuminant (as seen through 
         # the lens) may not have been the same color as the user's white balance setting.
-        c *= wbRatio
+        c *= wb_ratio
 
         c = XYZ_to_linAP0(c)
 
