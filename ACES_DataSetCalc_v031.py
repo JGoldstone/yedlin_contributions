@@ -732,9 +732,9 @@ def write_informative_header(dataSet, colorspace, dest_file=sys.stdout):
     print('\n\n-----------------------------------\n'
           'A properly exposed Macbeth chart illuminated with CIE 1931 x,y chromaticity of:\n'
           'x = ' + '{0:.4f}'.format(dataSet[1][0]) + ' , y = ' + '{0:.4f}'.format(dataSet[1][1]) + '\n'
-                                                                                                   'as seen through the lens\n'
-                                                                                                   'should yield the below RGB triplets if the user White Balance is set to:\n'
-                                                                                                   '{0:.0f}'.format(
+           'as seen through the lens\n'
+           'should yield the below RGB triplets if the user White Balance is set to:\n'
+           '{0:.0f}'.format(
         dataSet[2][0]) + 'K , ' + '{0:.4f}'.format(dataSet[2][1]) + ' ', end='', file=dest_file)
     try:
         print(delta, end='', file=dest_file)
@@ -745,12 +745,13 @@ def write_informative_header(dataSet, colorspace, dest_file=sys.stdout):
     print(f"uv.\n\nValues given in {colorspace_titles[colorspace]}:\n", file=dest_file)
 
 
-def write_nuke_node(dataSet, dest_file=sys.stdout):
-    print('\nGiven here as a Nuke Constant node with results as sequential frames:\n')
+def write_nuke_node(target_cap_xyz_values, dest_file=sys.stdout):
+    if dest_file == sys.stdout:
+        dest_file.write('\nGiven here as a Nuke Constant node with results as sequential frames:\n\n')
     rCurve = ''
     gCurve = ''
     bCurve = ''
-    for chip in dataSet[0]:
+    for chip in target_cap_xyz_values:
         rCurve += (str(chip[1][0]) + ' ')
         gCurve += (str(chip[1][1]) + ' ')
         bCurve += (str(chip[1][2]) + ' ')
@@ -760,8 +761,8 @@ def write_nuke_node(dataSet, dest_file=sys.stdout):
     nukeNode += gCurve
     nukeNode += '} {curve '
     nukeNode += bCurve
-    nukeNode += '} {curve 0}}\n format "1920 1080 0 0 1920 1080 1 HD_1080"\n name ACES_targets\n selected true\n}\n\n'
-    print(nukeNode)
+    nukeNode += '} {curve 0}}\n format "1920 1080 0 0 1920 1080 1 HD_1080"\n name ACES_targets\n selected true\n}\n\n\n'
+    dest_file.write(nukeNode)
 
 
 def write_csv(target_cap_xyz_values, dest_file=sys.stdout):
