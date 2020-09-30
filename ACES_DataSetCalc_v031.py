@@ -19,6 +19,8 @@ from math import log
 
 from datetime import datetime
 
+from tty_ui import parse_user_xy, parse_user_cct_and_tint
+
 try:
   input = raw_input
 except:
@@ -539,60 +541,6 @@ def CCT_to_uv(CCT, D_uv=0):
 
 #This is the end of the block based on the Python colour-science package.
 
-# This function turns user input into x,y coordinates, 
-# even if the user is not careful about syntax.
-def parse_user_xy (user_xy):
-
-    #The user may have included extra spaces.
-    xy = str(user_xy).strip()
-    xy = re.sub( '\s+', ' ', xy )
-
-    #The user may have omitted commas in lists.       
-    xy_string = ''
-    for st in range( len(xy) ):
-        if st == 0 or st == len(xy) - 1:
-            xy_string += xy[st]
-        elif xy[st] == ' ' and xy_string[-1].isdigit():
-            if xy[st+1].isdigit() or xy[st+1]=='.' or xy[st+1]=='-':
-                xy_string += (',')
-        else:
-            xy_string += xy[st]
-                        
-    #The user may have omitted parentheses.
-    parenths = False
-    for st in xy:
-        if st == '(' or st == '[':
-            parenths == True
-            break
-    if parenths == False:
-        xy = ( '(' + xy_string + ')' )
-    else:
-        xy = xy_string
-    
-    #Evaluate the user string, forcing a list even if it evaluates as tuple.     
-    return list(eval(xy))
-
-#Convert the user's white balance input to usable CCT and Tint.
-def parse_user_cct_and_tint(user_cct, user_tint):
-
-    if type(user_cct) == str:
-        cct = ''
-        for c in user_cct:
-            if c.isdigit() or c == '.' or c == '-' : cct += c
-        cct = eval(cct)
-    else:
-        cct = float(user_cct)
-        
-    if type(user_tint) == str:
-        tint = ''
-        for c in user_tint:
-            if c.isdigit() or c == '.' or c == '-' : tint += c
-        tint = eval(tint)
-    else:
-        tint = float(user_tint)
-        
-    return [cct,tint]
-
 # The main calculator function takes the user's input and returns the targets.
 # Even though the chips are semi-hardcoded, they're treated here as user input,
 # for future versions in which the user may be able to define the color chips.
@@ -890,7 +838,6 @@ def output_to_csv_file(filename, dataSet):
     print('done')
 
 def user_interface():
-    
     print ('-----------------------------------\n\n\n'
          'Enter the CIE 1931 x,y coordinates of the illuminant that fell on the Macbeth chart.\n'
          'Mesure the illumant through the same lens you used to shoot the chart, so that\n'
