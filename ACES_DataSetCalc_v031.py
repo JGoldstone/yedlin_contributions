@@ -11,7 +11,6 @@ from __future__ import print_function
 # and am now doing equivalents in XYZ instead of
 # CAT02 LMS.
 
-import re
 import sys
 import numpy as np
 from collections import namedtuple
@@ -591,7 +590,7 @@ ACES_NEUTRAL_LITTLE_XY = [0.32168, 0.33767]
 # The main calculator function takes the user's input and returns the targets.
 # Even though the chips are semi-hardcoded, they're treated here as user input,
 # for future versions in which the user may be able to define the color chips.
-def calc_target_cap_xyz_values(measured_neutral_xy, cct, d_uv, color_chips, colorspace):
+def calc_target_XYZ_values(measured_neutral_xy, cct, d_uv, color_chips, colorspace):
     """
 
     Parameters
@@ -615,29 +614,29 @@ def calc_target_cap_xyz_values(measured_neutral_xy, cct, d_uv, color_chips, colo
         CIE XYZ nominal expected values for captured target color chips
 
     """
-    measured_neutral_cap_xyz = np.array(xy_to_XYZ(measured_neutral_xy))
+    measured_neutral_XYZ = np.array(xy_to_XYZ(measured_neutral_xy))
 
     # Get the x,y coordinates for the white balance.
     camera_uv = CCT_to_uv(cct, d_uv)
     camera_xy = uv_to_xy(camera_uv)
-    camera_cap_xyz = np.array(xy_to_XYZ(camera_xy))
+    camera_XYZ = np.array(xy_to_XYZ(camera_xy))
 
-    illum_c_cap_xyz = np.array(xy_to_XYZ(ILLUM_C_LITTLE_XY))
-    aces_neutral_cap_xyz = np.array(xy_to_XYZ(ACES_NEUTRAL_LITTLE_XY))
+    illum_c_XYZ = np.array(xy_to_XYZ(ILLUM_C_LITTLE_XY))
+    aces_neutral_XYZ = np.array(xy_to_XYZ(ACES_NEUTRAL_LITTLE_XY))
 
     # Find the white balance ratio, which is the ratio between
     # the camera white balance setting and the actual color of the light.
-    wb_ratio = measured_neutral_cap_xyz / camera_cap_xyz
+    wb_ratio = measured_neutral_XYZ / camera_XYZ
 
     # Build the data set output triplets.
-    target_cap_xyz_values = []
+    target_XYZ_values = []
     for chip in color_chips:
         c = deepcopy(chip[1])
         c = Yxy_to_XYZ(c)
         c = np.array(c)
 
         # Convert reference white from Illuminant C to AP0.
-        c *= aces_neutral_cap_xyz / illum_c_cap_xyz
+        c *= aces_neutral_XYZ / illum_c_XYZ
 
         # Account for the shift due to the fact that the actual illuminant (as seen through 
         # the lens) may not have been the same color as the user's white balance setting.
@@ -651,16 +650,16 @@ def calc_target_cap_xyz_values(measured_neutral_xy, cct, d_uv, color_chips, colo
 
         # Convert to the user's preferred color space.
         if colorspace == 'AP0':
-            target_cap_xyz_values.append([chip[0], c])
+            target_XYZ_values.append([chip[0], c])
         else:
             c = linAP0_to_linAP1(c)
             if colorspace == 'AP1':
-                target_cap_xyz_values.append([chip[0], c])
+                target_XYZ_values.append([chip[0], c])
             elif colorspace == 'CC':
-                target_cap_xyz_values.append([chip[0], linAP1_to_ACEScc(c)])
+                target_XYZ_values.append([chip[0], linAP1_to_ACEScc(c)])
             else:
-                target_cap_xyz_values.append([chip[0], linAP1_to_ACEScct(c)])
-    return target_cap_xyz_values
+                target_XYZ_values.append([chip[0], linAP1_to_ACEScct(c)])
+    return target_XYZ_values
 
 
 # Tee up special characters for the user interface.
@@ -746,13 +745,13 @@ def write_informative_header(dataSet, colorspace, dest_file=sys.stdout):
     print(f"uv.\n\nValues given in {colorspace_titles[colorspace]}:\n", file=dest_file)
 
 
-def write_nuke_node(target_cap_xyz_values, dest_file=sys.stdout):
+def write_nuke_node(target_XYZ_values, dest_file=sys.stdout):
     if dest_file == sys.stdout:
         dest_file.write('\nGiven here as a Nuke Constant node with results as sequential frames:\n\n')
     rCurve = ''
     gCurve = ''
     bCurve = ''
-    for chip in target_cap_xyz_values:
+    for chip in target_XYZ_values:
         rCurve += (str(chip[1][0]) + ' ')
         gCurve += (str(chip[1][1]) + ' ')
         bCurve += (str(chip[1][2]) + ' ')
@@ -766,18 +765,18 @@ def write_nuke_node(target_cap_xyz_values, dest_file=sys.stdout):
     dest_file.write(nukeNode)
 
 
-def write_csv(target_cap_xyz_values, dest_file=sys.stdout):
-    for (name, (r, g, b)) in target_cap_xyz_values:
+def write_csv(target_XYZ_values, dest_file=sys.stdout):
+    for (name, (r, g, b)) in target_XYZ_values:
         dest_file.write(f"{name} , {r:.3f} , {g:.3f} , {b:.3f}\n")
         if dest_file == sys.stdout:
             print('-----------------------------------\n')
 
-def write_output(target_chip_cap_xyzs, colorspace, nuke, dest_file=sys.stdout):
-    write_informative_header(target_chip_cap_xyzs, colorspace, dest_file=dest_file)
+def write_output(target_chip_XYZs, colorspace, nuke, dest_file=sys.stdout):
+    write_informative_header(target_chip_XYZs, colorspace, dest_file=dest_file)
     if nuke:
-        write_nuke_node(target_chip_cap_xyzs, dest_file=dest_file)
+        write_nuke_node(target_chip_XYZs, dest_file=dest_file)
     else:
-        for chip in target_chip_cap_xyzs:
+        for chip in target_chip_XYZs:
             print(chip[0] + ' , ', end='')
             for c in range(3):
                 if c < 2:
@@ -795,15 +794,15 @@ def unique_filename(user_illum_xy, cct, tint, colorspace):
     return filename_base
 
 
-def calc_and_write_target_cap_xyz_values(user_illum_xy, cct, tint, macbeth, colorspace):
+def calc_and_write_target_XYZ_values(user_illum_xy, cct, tint, macbeth, colorspace):
     # #Perform the main function.
-    target_cap_xyz_values = calc_target_cap_xyz_values(user_illum_xy, cct, tint, macbeth, colorspace)
+    target_XYZ_values = calc_target_XYZ_values(user_illum_xy, cct, tint, macbeth, colorspace)
     output_filename_base = unique_filename(user_illum_xy, cct, tint, colorspace)
-    write_output(target_cap_xyz_values, colorspace, False)
+    write_output(target_XYZ_values, colorspace, False)
     with open(f"{output_filename_base}.nk", 'w') as dest_file:
-        write_nuke_node(target_cap_xyz_values, dest_file=dest_file)
+        write_nuke_node(target_XYZ_values, dest_file=dest_file)
     with open(f"{output_filename_base}.csv", 'w') as dest_file:
-        write_csv(target_cap_xyz_values, dest_file=dest_file)
+        write_csv(target_XYZ_values, dest_file=dest_file)
 
 
 def cli_ui():
@@ -813,7 +812,7 @@ def cli_ui():
     while looper == True:
         try:
             (illuminant, cct, tint, colorChips, colorspace) = user_interface()
-            calc_and_write_target_cap_xyz_values(illuminant, cct, tint, colorChips, colorspace)
+            calc_and_write_target_XYZ_values(illuminant, cct, tint, colorChips, colorspace)
             goAgain = input('Enter "q" to quit or any other key to run again.')
         except:
             goAgain = input('\n\nError: could not interpret input. "q" to quit or any other key to try again.')
