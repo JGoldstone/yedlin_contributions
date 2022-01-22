@@ -77,13 +77,6 @@ def parse_tint(tint):
     -------
     float
 
-    Notes
-    -----
-    Differs from Steve's parser in that it won't ignore random crap in the
-    middle of a number, won't allow multiple decimal points, won't allow
-    CCTs below 1 (e.g. 0.341), and doesn't allow negative CCTs.
-
-    That leaves: 5400, 5400., 5400.1, 5400K, 5400.K, 5400.1K, 5600 K, and the like
     """
     p = re.compile(r'^\s*([-+]?\d+(\.\d*)?)\s*$')
     m = p.match(tint)

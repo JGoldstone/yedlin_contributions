@@ -73,7 +73,7 @@ def XYZ_to_Yxy(triplet):
 
 # Matrix coefficients per Edward Giorgianni and Thomas Madden in "Digital Color Management"
 # match Lindbloom's to at least 3 decimal places.
-# [jg] n.b. 'RGB' here means 'Rec. 709 primaries' (which are also the sRGB primaries)
+# [jg] n.b. 'linRGB' here means 'linear Rec. 709 / sRGB primaries'
 def XYZ_to_linRGB(triplet):
     X, Y, Z = triplet
     R = X * 3.242 + Y * -1.5374 + Z * -.4986
@@ -584,7 +584,7 @@ def CCT_to_uv(CCT, D_uv=0):
 # so we'll need the x,y coordinate for illuminant C.
 ILLUM_C_LITTLE_XY = [0.3101, 0.3163]
 
-# The AP0 x,y white point in given in the ACES documentation:
+# The AP0 x,y white point is given in the ACES documentation:
 ACES_NEUTRAL_LITTLE_XY = [0.32168, 0.33767]
 
 # The main calculator function takes the user's input and returns the targets.
@@ -662,10 +662,6 @@ def calc_target_XYZ_values(measured_neutral_xy, cct, d_uv, color_chips, colorspa
     return target_XYZ_values
 
 
-# Tee up special characters for the user interface.
-delta = (u'\u0394')
-deg = (u'\u00BA')
-
 # These are the Macbeth color chips as published by Mr Charles Poynton.
 # I have measured my own personal Macbeth chart and it is incredibly close,
 # so we know those charts are made with impressive reliability and repeatability.
@@ -726,7 +722,11 @@ macbeth = [
 #     (23, 'neutral 3.5 (1.05 D)', np.array([0.3401, 0.3548, 0.0883])),
 #     (24, 'black 2 (1.5 D)', np.array([0.3406, 0.3537, 0.0311])))
 
+
 def write_informative_header(dataSet, colorspace, dest_file=sys.stdout):
+    # Tee up special characters for the user interface.
+    delta = (u'\u0394')
+    # deg = (u'\u00BA')
     # Print the results to the screen either as a Nuke Constant node or in a form
     # which is both human-readable and usable as comma-separated.
     print('\n\n-----------------------------------\n'
